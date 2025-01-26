@@ -1,6 +1,6 @@
 import express from 'express';
 import fetch from 'node-fetch';
-import { DOMParser } from 'xmldom';
+import { JSDOM } from 'jsdom';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
@@ -26,26 +26,72 @@ function formatHtml(html) {
 }
 
 function extractTextContent(element, selector) {
-  return element?.getElementsByTagName(selector)?.[0]?.textContent?.trim() || '';
+  return element?.querySelector(selector)?.textContent?.trim() || '';
 }
 
 function extractAttribute(element, selector, attribute) {
-  return element?.getElementsByTagName(selector)?.[0]?.getAttribute(attribute) || '';
+  return element?.querySelector(selector)?.getAttribute(attribute) || '';
 }
 
-function findElementByClass(element, className) {
-  const elements = element.getElementsByTagName('*');
-  for (let i = 0; i < elements.length; i++) {
-    const classAttr = elements[i].getAttribute('class');
-    if (classAttr && classAttr.includes(className)) {
-      return elements[i];
+function extractImageUrl(element) {
+  const mediaContainer = element.querySelector('.card__media-container');
+  if (!mediaContainer) return '';
+  
+  const style = mediaContainer.getAttribute('style');
+  if (!style) return '';
+  
+  const match = style.match(/background-image:\s*url\((.*?)\)/);
+  return match ? match[1].replace(/['"]/g, '') : '';
+}
+
+function extractPrice(element, title) {
+  // D'abord essayer d'extraire du titre
+  if (title) {
+    const priceMatch = title.match(/\((\d+)\s*€\)/);
+    if (priceMatch) {
+      return parseInt(priceMatch[1]);
     }
   }
+
+  // Sinon, chercher dans l'élément de prix
+  const priceElement = element.querySelector('.card__price');
+  if (priceElement) {
+    const priceText = priceElement.textContent.trim();
+    const priceMatch = priceText.match(/\d+/);
+    return priceMatch ? parseInt(priceMatch[0]) : null;
+  }
+
   return null;
 }
 
+function logElementDetails(element) {
+  console.log('\n=== Détails de l\'élément ===');
+  console.log('ID:', element.id);
+  console.log('Classes:', element.className);
+  console.log('Attributs:', Array.from(element.attributes).map(attr => `${attr.name}="${attr.value}"`).join(', '));
+  
+  const mediaContainer = element.querySelector('.card__media-container');
+  if (mediaContainer) {
+    console.log('\n=== Détails du conteneur média ===');
+    console.log('Style:', mediaContainer.getAttribute('style'));
+    console.log('URL extraite:', extractImageUrl(element));
+  }
+  
+  console.log('\n=== Données spécifiques ===');
+  const titleLink = element.querySelector('.card__title-link');
+  const priceElement = element.querySelector('.card__price');
+  console.log('Titre (aria-label):', titleLink?.getAttribute('aria-label'));
+  console.log('Lien (href):', titleLink?.getAttribute('href'));
+  console.log('Prix:', priceElement?.textContent?.trim());
+  console.log('=====================================\n');
+}
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
 app.get("/api/immo", async (req, res) => {
-  const url = "https://www.immoweb.be/en/search/house-and-apartment/for-rent?countries=BE&maxPrice=1100&minBedroomCount=1&districts=CHARLEROI,NAMUR,BRUSSELS&priceType=MONTHLY_RENTAL_PRICE&minPrice=800&page=1&orderBy=newest";
+  const url = "https://www.immoweb.be/fr/recherche/maison-et-appartement/a-louer/bruxelles/arrondissement?countries=BE&maxPrice=1200&maxConstructionYear=2025&minBedroomCount=1&page=1&orderBy=newest";
 
   console.log("Chargement de la page...");
 
@@ -63,56 +109,48 @@ app.get("/api/immo", async (req, res) => {
     const html = await response.text();
     const cleanHtml = DOMPurify.sanitize(html);
     
-    const parser = new DOMParser({
-      errorHandler: { warning: () => {}, error: () => {}, fatalError: () => {} }
-    });
-
-    const doc = parser.parseFromString(cleanHtml, "text/html");
+    // Log du HTML nettoyé
+    console.log('\n=== HTML nettoyé ===');
+    console.log(cleanHtml);
+    console.log('===================\n');
+    
+    const dom = new JSDOM(cleanHtml);
+    const document = dom.window.document;
+    
     const ads = [];
-    const adElements = doc.getElementsByTagName("article");
+    const adElements = document.querySelectorAll("article");
     console.log(`Nombre d'articles trouvés : ${adElements.length}`);
 
     for (let i = 0; i < adElements.length; i++) {
       const ad = adElements[i];
       try {
         console.log(`\n=== Article ${i + 1}/${adElements.length} ===`);
-        console.log('HTML brut:', ad.toString().trim().replace(/\s+/g, ' '));
+        
+        // Log tous les détails de l'élément
+        logElementDetails(ad);
 
-        // Extraction des données de base
-        const id = ad.getAttribute('id')?.replace('classifieds_recommendation_result_list_', '') || '';
-        const title = extractTextContent(ad, 'h3');
-        const link = extractAttribute(ad.getElementsByTagName('h3')[0], 'a', 'href') || '';
-        const surface = extractTextContent(ad, 'p')?.match(/\d+/)?.[0] || '';
-        const location = ad.getElementsByTagName('p')[2]?.textContent?.trim() || '';
-        
-        // Extraction de l'image avec la nouvelle méthode
-        const mediaContainer = findElementByClass(ad, 'card__media-container');
-        const backgroundStyle = mediaContainer?.getAttribute("style") || '';
-        const imageUrl = backgroundStyle.match(/url\((.*?)\)/)?.[1] || '';
-        
-        // Extraction du logo de l'agence
-        const agencyLogo = ad.getElementsByTagName('img')[0]?.getAttribute('src') || '';
-        const agencyName = ad.getElementsByTagName('img')[0]?.getAttribute('alt') || '';
+        const id = ad.id?.replace('classifieds_recommendation_result_list_', '') || '';
+        const titleLink = ad.querySelector('.card__title-link');
+        const title = titleLink?.getAttribute('aria-label') || '';
+        const link = titleLink?.getAttribute('href') || '';
+        const surface = ad.querySelector('p')?.textContent?.match(/\d+/)?.[0] || '';
+        const location = ad.querySelectorAll('p')[2]?.textContent?.trim() || '';
+        const price = extractPrice(ad, title);
+        const imageUrl = extractImageUrl(ad);
 
         const property = {
           id,
           title: title.replace(/\s+/g, ' ').trim(),
+          price,
           surface: surface ? parseInt(surface) : null,
           location: location.trim(),
-          media: {
-            mainImage: imageUrl
-          },
-          agency: {
-            name: agencyName,
-            logo: agencyLogo
-          },
+          imageUrl,
           link,
           createdAt: new Date().toISOString()
         };
 
         ads.push(property);
         console.log('\nAnnonce extraite avec succès:', property);
-        console.log('=====================================');
       } catch (err) {
         console.error(`\nErreur lors de l'extraction de l'annonce ${i + 1}:`, err.message);
         console.error(err.stack);
