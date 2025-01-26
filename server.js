@@ -164,6 +164,80 @@ app.get("/api/immo", async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+app.get("/api/buy", async (req, res) => {
+  const url = "https://www.immoweb.be/fr/recherche/maison-et-appartement/a-vendre/bruxelles/arrondissement?countries=BE&maxPrice=350000&maxConstructionYear=2025&priceType=SALE_PRICE&page=1&orderBy=newest";
+
+  console.log("Chargement de la page...");
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erreur de chargement : ${response.statusText}`);
+    }
+
+    const html = await response.text();
+    const cleanHtml = DOMPurify.sanitize(html);
+    
+    // Log du HTML nettoyé
+    console.log('\n=== HTML nettoyé ===');
+    console.log(cleanHtml);
+    console.log('===================\n');
+    
+    const dom = new JSDOM(cleanHtml);
+    const document = dom.window.document;
+    
+    const ads = [];
+    const adElements = document.querySelectorAll("article");
+    console.log(`Nombre d'articles trouvés : ${adElements.length}`);
+
+    for (let i = 0; i < adElements.length; i++) {
+      const ad = adElements[i];
+      try {
+        console.log(`\n=== Article ${i + 1}/${adElements.length} ===`);
+        
+        // Log tous les détails de l'élément
+        logElementDetails(ad);
+
+        const id = ad.id?.replace('classifieds_recommendation_result_list_', '') || '';
+        const titleLink = ad.querySelector('.card__title-link');
+        const title = titleLink?.getAttribute('aria-label') || '';
+        const link = titleLink?.getAttribute('href') || '';
+        const surface = ad.querySelector('p')?.textContent?.match(/\d+/)?.[0] || '';
+        const location = ad.querySelectorAll('p')[2]?.textContent?.trim() || '';
+        const price = extractPrice(ad, title);
+        const imageUrl = extractImageUrl(ad);
+
+        const property = {
+          id,
+          title: title.replace(/\s+/g, ' ').trim(),
+          price,
+          surface: surface ? parseInt(surface) : null,
+          location: location.trim(),
+          imageUrl,
+          link,
+          createdAt: new Date().toISOString()
+        };
+
+        ads.push(property);
+        console.log('\nAnnonce extraite avec succès:', property);
+      } catch (err) {
+        console.error(`\nErreur lors de l'extraction de l'annonce ${i + 1}:`, err.message);
+        console.error(err.stack);
+      }
+    }
+
+    console.log(`\nScraping terminé : ${ads.length} annonces récupérées sur ${adElements.length} articles trouvés`);
+    res.json({ success: true, data: ads });
+  } catch (err) {
+    console.error("Erreur principale :", err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
