@@ -38,6 +38,16 @@ app.get('/api/scrape', async (req, res) => {
   }
 });
 
+app.get('/api/immo', async (req, res) => {
+  try {
+    const ads = await runScraper('rent');
+    res.json(ads);
+  } catch (error) {
+    console.error('Erreur lors du scraping:', error);
+    res.status(500).json({ error: 'Erreur interne du serveur' });
+  }
+});
+
 // Gestion des erreurs
 app.use((err, req, res, next) => {
   console.error(err.stack);
