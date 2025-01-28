@@ -13,7 +13,10 @@ export async function runScraper(type) {
 
   console.log(`Chargement de la page pour ${type}...`);
 
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
   const page = await browser.newPage();
   await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36');
   await page.goto(url, { waitUntil: 'domcontentloaded' });
@@ -28,7 +31,7 @@ export async function runScraper(type) {
 
     adElements.forEach(ad => {
       if (ads.length >= 30) return;
-      
+
       const id = ad.id?.replace('classified_', '') || '';
       const titleLink = ad.querySelector('.card__title-link');
       const title = titleLink?.getAttribute('aria-label') || '';
@@ -55,7 +58,6 @@ export async function runScraper(type) {
         postalCode = localityParts.shift() || '';
         city = localityParts.join(' ') || '';
       }
-      console.log(`Localité extraite : ${localityText}, Code postal : ${postalCode}, Ville : ${city}`);
 
       const imageElement = ad.querySelector('.card__media-picture');
       const imageUrl = imageElement?.getAttribute('src') || '';
@@ -72,8 +74,10 @@ export async function runScraper(type) {
         charges,
         bedrooms: bedrooms ? parseInt(bedrooms) : null,
         surface,
-        postalCode,
-        city,
+        commune: {
+          postalCode,
+          city
+        },
         habitatType,
         link,
         imageUrl,
@@ -85,9 +89,7 @@ export async function runScraper(type) {
     return ads;
   });
 
-  console.log("Annonces extraites:", ads);
-
+  console.log(`Scraping terminé : ${ads.length} annonces récupérées.`);
   await browser.close();
-  console.log(`Scraping terminé : ${ads.length} annonces récupérées`);
   return ads;
 }
