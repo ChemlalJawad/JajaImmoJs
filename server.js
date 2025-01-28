@@ -2,7 +2,7 @@ import express from 'express';
 import { runScraper } from './scraper.js';
 
 const app = express();
-const PORT = 3000;
+const PORT = 8080;
 
 // Endpoint direct pour récupérer uniquement les locations
 app.get('/api/immo', async (req, res) => {
