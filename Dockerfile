@@ -1,7 +1,7 @@
-# Étape 1 : Utiliser une image Node.js officielle avec Debian
+# Étape 1 : Utiliser Node.js slim comme base
 FROM node:18-slim
 
-# Étape 2 : Installer les dépendances pour Puppeteer/Chromium
+# Étape 2 : Installer les dépendances pour Chromium
 RUN apt-get update && apt-get install -y \
     wget \
     ca-certificates \
@@ -25,20 +25,17 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Étape 3 : Installer les dépendances du projet
+# Étape 3 : Configurer Puppeteer
 WORKDIR /usr/src/app
 COPY package*.json ./
-RUN npm install --omit=dev
+RUN npm install
+ENV PUPPETEER_SKIP_DOWNLOAD=false
 
 # Étape 4 : Copier le code source
 COPY . .
 
-# Étape 5 : Configurer la variable d'environnement pour Puppeteer
-ENV PUPPETEER_SKIP_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome
-
-# Étape 6 : Exposer le port requis par Cloud Run
+# Étape 5 : Exposer le port pour Google Cloud Run
 EXPOSE 8080
 
-# Étape 7 : Lancer le serveur Node.js
+# Étape 6 : Lancer le serveur Node.js
 CMD ["node", "server.js"]
