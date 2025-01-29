@@ -1,160 +1,69 @@
 import express from 'express';
-import { runScraper } from './scraping/immoweb.js';
-import { runZimmoScraper } from './scraping/zimmo.js';
-import { runImmoAbitaScraper } from './scraping/agence/immoabita.js';
-import swaggerUi from 'swagger-ui-express';
-import * as swaggerDocument from './swagger.js';
-import { runImmoVlanScraper } from './scraping/immovlan.js';
+import NodeCache from 'node-cache';
+import { runScraper as runImmoweb } from './scraping/immoweb.js';
+import { runZimmoScraper as runZimmo } from './scraping/zimmo.js';
+import { runImmoVlanScraper as runImmoVlan } from './scraping/immovlan.js';
 
 const app = express();
 const PORT = 8080;
+const cache = new NodeCache({ stdTTL: 300, checkperiod: 60 }); // Cache pendant 5 minutes
 
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*'); // Autorise tous les domaines
+  res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type');
   next();
 });
 
-// Documentation Swagger
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+// Fonction pour exécuter les scrapers de manière dynamique
+async function scrapeAllSources(type) {
+  console.log(`Lancement du scraping pour ${type}...`);
 
-// Endpoint pour récupérer les locations depuis Immoweb
-app.get('/api/immo', async (req, res) => {
+  // Exécute tous les scrapers en parallèle
+  const [immoweb, zimmo, immovlan] = await Promise.all([
+    runImmoweb(type),
+    runZimmo(type),
+    runImmoVlan(type),
+  ]);
+
+  // Fusionner les résultats et limiter à 30 annonces
+  return [...immoweb, ...zimmo, ...immovlan].slice(0, 30);
+}
+
+// Endpoint générique : /api/all/rent ou /api/all/buy
+app.get('/api/:type', async (req, res) => {
+  const type = req.params.type;
+  if (!['rent', 'buy'].includes(type)) {
+    return res.status(400).json({ error: "Type invalide. Utilisez 'rent' ou 'buy'." });
+  }
+
+  // Vérifier si les données sont en cache
+  const cachedData = cache.get(`all_${type}`);
+  if (cachedData) {
+    console.log(`Données servies depuis le cache pour ${type}.`);
+    return res.json(cachedData);
+  }
+
+  console.log(`Cache vide, exécution du scraping pour ${type}...`);
   try {
-    console.log('Lancement du scraping des locations Immoweb...');
-    const ads = await runScraper('rent');
+    const ads = await scrapeAllSources(type);
+    cache.set(`all_${type}`, ads); // Stocker dans le cache
     res.json(ads);
   } catch (error) {
-    console.error('Erreur lors du scraping:', error);
+    console.error(`Erreur lors du scraping pour ${type}:`, error);
     res.status(500).json({ error: error.message || 'Erreur interne du serveur' });
   }
 });
 
-app.get('/api/immobuy', async (req, res) => {
-  try {
-    console.log('Lancement du scraping des locations Immoweb...');
-    const ads = await runScraper('buy');
-    res.json(ads);
-  } catch (error) {
-    console.error('Erreur lors du scraping:', error);
-    res.status(500).json({ error: error.message || 'Erreur interne du serveur' });
-  }
-});
-// Endpoint pour récupérer les locations depuis Zimmo
-app.get('/api/zimmo', async (req, res) => {
-  try {
-    console.log('Lancement du scraping des locations Zimmo...');
-    const ads = await runZimmoScraper('rent');
-    res.json(ads);
-  } catch (error) {
-    console.error('Erreur lors du scraping Zimmo:', error);
-    res.status(500).json({ error: error.message || 'Erreur interne du serveur' });
-  }
-});
-
-// Endpoint pour récupérer les locations depuis Zimmo
-app.get('/api/zimmobuy', async (req, res) => {
-  try {
-    console.log('Lancement du scraping des locations Zimmo...');
-    const ads = await runZimmoScraper('buy');
-    res.json(ads);
-  } catch (error) {
-    console.error('Erreur lors du scraping Zimmo:', error);
-    res.status(500).json({ error: error.message || 'Erreur interne du serveur' });
-  }
-});
-
-// Endpoint pour récupérer les locations depuis Immoabita
-app.get('/api/immoabita', async (req, res) => {
-  try {
-    console.log('Lancement du scraping des locations Immoabita...');
-    const ads = await runImmoAbitaScraper('rent');
-    res.json(ads);
-  } catch (error) {
-    console.error('Erreur lors du scraping Immoabita:', error);
-    res.status(500).json({ error: error.message || 'Erreur interne du serveur' });
-  }
-});
-
-// Endpoint pour récupérer les locations depuis Immoabita
-app.get('/api/immoabitabuy', async (req, res) => {
-  try {
-    console.log('Lancement du scraping des ventes Immoabita...');
-    const ads = await runImmoAbitaScraper('buy');
-    res.json(ads);
-  } catch (error) {
-    console.error('Erreur lors du scraping Immoabita:', error);
-    res.status(500).json({ error: error.message || 'Erreur interne du serveur' });
-  }
-});
-
-// Endpoint pour récupérer les locations depuis Immovlan
-app.get('/api/immovlan', async (req, res) => {
-  try {
-    console.log('Lancement du scraping des locations Immovlan...');
-    const ads = await runImmoVlanScraper('rent');
-    res.json(ads);
-  } catch (error) {
-    console.error('Erreur lors du scraping Immovlan:', error);
-    res.status(500).json({ error: error.message || 'Erreur interne du serveur' });
-  }
-});
-
-// Endpoint pour récupérer les locations depuis Immovlan
-app.get('/api/immovlanbuy', async (req, res) => {
-  try {
-    console.log('Lancement du scraping des locations Immovlan...');
-    const ads = await runImmoVlanScraper('buy');
-    res.json(ads);
-  } catch (error) {
-    console.error('Erreur lors du scraping Immovlan:', error);
-    res.status(500).json({ error: error.message || 'Erreur interne du serveur' });
-  }
-});
-
-app.get('/api/rent', async (req, res) => {
-  try {
-    console.log('Lancement du scraping pour toutes les plateformes...');
-
-    // Exécute les 3 scrapers en parallèle
-    const [immovlan, immoweb, zimmo] = await Promise.all([
-      runImmoVlanScraper('rent'),
-      runScraper('rent'),
-      runZimmoScraper('rent')
-    ]);
-
-    // Regroupe les résultats
-    const allAds = [...immovlan, ...immoweb, ...zimmo];
-
-    res.json(allAds);
-  } catch (error) {
-    console.error('Erreur lors du scraping global:', error);
-    res.status(500).json({ error: error.message || 'Erreur interne du serveur' });
-  }
-});
-
-app.get('/api/buy', async (req, res) => {
-  try {
-    console.log('Lancement du scraping pour toutes les plateformes...');
-
-    // Exécute les 3 scrapers en parallèle
-    const [immovlan, immoweb, zimmo] = await Promise.all([
-      runImmoVlanScraper('buy'),
-      runScraper('buy'),
-      runZimmoScraper('buy')
-    ]);
-
-    // Regroupe les résultats
-    const allAds = [...immovlan, ...immoweb, ...zimmo];
-
-    res.json(allAds);
-  } catch (error) {
-    console.error('Erreur lors du scraping global:', error);
-    res.status(500).json({ error: error.message || 'Erreur interne du serveur' });
-  }
-});
+// Rafraîchir le cache automatiquement toutes les 5 minutes
+setInterval(async () => {
+  console.log('Mise à jour automatique du cache...');
+  await scrapeAllSources('rent').then(data => cache.set('all_rent', data));
+  await scrapeAllSources('buy').then(data => cache.set('all_buy', data));
+}, 300000);
 
 app.listen(PORT, () => {
   console.log(`Serveur démarré sur http://localhost:${PORT}`);
+  scrapeAllSources('rent').then(data => cache.set('all_rent', data));
+  scrapeAllSources('buy').then(data => cache.set('all_buy', data));
 });
