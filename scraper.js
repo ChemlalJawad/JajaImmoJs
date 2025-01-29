@@ -15,9 +15,16 @@ export async function runScraper(type) {
 
   const browser = await puppeteer.launch({
     headless: true,
-    executablePath: puppeteer.executablePath(),
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
-    defaultViewport: null, // Pour éviter les erreurs de viewport limité
+    executablePath: puppeteer.executablePath(), // Utilise le Chromium de Puppeteer
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--disable-accelerated-2d-canvas',
+      '--window-size=1280x800'
+    ],
+    defaultViewport: null
   });
  
   const page = await browser.newPage();

@@ -4,6 +4,13 @@ import { runScraper } from './scraper.js';
 const app = express();
 const PORT = 8080;
 
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*'); // Autorise tous les domaines
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
+
 // Endpoint direct pour récupérer uniquement les locations
 app.get('/api/immo', async (req, res) => {
   try {
