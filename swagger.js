@@ -1,54 +1,90 @@
-export const specs = {
-  openapi: '3.0.0',
+export default {
+  openapi: "3.0.0",
   info: {
-    title: 'API Immoweb Scraper',
-    version: '1.0.0',
-    description: 'API pour extraire des annonces immobilières depuis Immoweb',
+    title: "API de Scraping Immobilier",
+    version: "1.0.0",
+    description: "Documentation pour l'API de scraping des annonces immobilières depuis Immoweb et Zimmo."
   },
   servers: [
     {
-      url: 'http://localhost:3000',
-      description: 'Serveur local',
-    },
+      url: "http://localhost:8080",
+      description: "Serveur local"
+    }
   ],
   paths: {
-    '/api/health': {
+    "/api/immo": {
       get: {
-        summary: 'Vérifier l\'état de l\'API',
+        summary: "Récupérer les annonces de location depuis Immoweb",
+        description: "Retourne une liste de 30 annonces de location depuis Immoweb.",
         responses: {
-          200: {
-            description: 'API fonctionnelle',
-          },
-        },
-      },
+          "200": {
+            description: "Liste des annonces",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      title: { type: "string" },
+                      price: { type: "integer" },
+                      bedrooms: { type: "integer" },
+                      surface: { type: "integer" },
+                      commune: {
+                        type: "object",
+                        properties: {
+                          postalCode: { type: "string" },
+                          city: { type: "string" }
+                        }
+                      },
+                      link: { type: "string" },
+                      imageUrl: { type: "string" },
+                      createdAt: { type: "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     },
-    '/api/scrape': {
+    "/api/zimmo": {
       get: {
-        summary: 'Extraire des annonces immobilières',
-        parameters: [
-          {
-            name: 'type',
-            in: 'query',
-            required: true,
-            schema: {
-              type: 'string',
-              enum: ['rent', 'buy'],
-            },
-            description: 'Type d\'annonces à extraire (location ou vente)',
-          },
-        ],
+        summary: "Récupérer les annonces de location depuis Zimmo",
+        description: "Retourne une liste de 30 annonces de location depuis Zimmo.",
         responses: {
-          200: {
-            description: 'Liste des annonces extraites',
-          },
-          400: {
-            description: 'Type de scraping invalide',
-          },
-          500: {
-            description: 'Erreur lors du scraping',
-          },
-        },
-      },
-    },
-  },
+          "200": {
+            description: "Liste des annonces",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      title: { type: "string" },
+                      price: { type: "integer" },
+                      bedrooms: { type: "integer" },
+                      surface: { type: "integer" },
+                      commune: {
+                        type: "object",
+                        properties: {
+                          postalCode: { type: "string" },
+                          city: { type: "string" }
+                        }
+                      },
+                      link: { type: "string" },
+                      imageUrl: { type: "string" },
+                      createdAt: { type: "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 };
