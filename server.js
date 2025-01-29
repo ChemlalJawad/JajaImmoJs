@@ -27,7 +27,7 @@ async function scrapeAllSources(type) {
   ]);
 
   // Fusionner les résultats et limiter à 30 annonces
-  return [...immoweb, ...zimmo, ...immovlan].slice(0, 30);
+  return [...immoweb, ...zimmo, ...immovlan];
 }
 
 // Endpoint générique : /api/all/rent ou /api/all/buy
