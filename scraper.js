@@ -40,7 +40,7 @@ export async function runScraper(type) {
     const ads = [];
 
     adElements.forEach(ad => {
-      if (ads.length >= 30) return;
+      if (ads.length >= 60) return;
 
       const id = ad.id?.replace('classified_', '') || '';
       const titleLink = ad.querySelector('.card__title-link');
