@@ -33,7 +33,7 @@ async function scrapeAllSources(type) {
 // Endpoint générique : /api/all/rent ou /api/all/buy
 app.get('/api/:type', async (req, res) => {
   const type = req.params.type;
-  if (!['rent', 'buy'].includes(type)) {
+  if (!['rent'].includes(type)) {
     return res.status(400).json({ error: "Type invalide. Utilisez 'rent' ou 'buy'." });
   }
 
@@ -59,11 +59,9 @@ app.get('/api/:type', async (req, res) => {
 setInterval(async () => {
   console.log('Mise à jour automatique du cache...');
   await scrapeAllSources('rent').then(data => cache.set('all_rent', data));
-  await scrapeAllSources('buy').then(data => cache.set('all_buy', data));
 }, 300000);
 
 app.listen(PORT, () => {
   console.log(`Serveur démarré sur http://localhost:${PORT}`);
   scrapeAllSources('rent').then(data => cache.set('all_rent', data));
-  scrapeAllSources('buy').then(data => cache.set('all_buy', data));
 });

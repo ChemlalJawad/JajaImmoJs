@@ -2,7 +2,7 @@ import puppeteer from 'puppeteer';
 
 export async function runImmoVlanScraper(type) {
   const urls = {
-    rent: "https://immovlan.be/fr/immobilier?transactiontypes=a-louer,en-colocation&municipals=bruxelles&propertytypes=maison,appartement&maxprice=1300&minbedrooms=1&maxbedrooms=2&noindex=1",
+    rent: "https://immovlan.be/fr/immobilier?transactiontypes=a-louer,en-colocation&municipals=bruxelles,charleroi&propertytypes=maison,appartement&maxprice=1300&minbedrooms=1&maxbedrooms=2&noindex=1",
     buy: "https://immovlan.be/fr/immobilier?transactiontypes=a-vendre,en-vente-publique&propertytypes=maison,appartement&municipals=bruxelles&maxprice=400000&noindex=1"
     };
 

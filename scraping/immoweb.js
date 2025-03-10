@@ -2,7 +2,7 @@ import puppeteer from 'puppeteer';
 
 export async function runScraper(type) {
   const urls = {
-    rent: "https://www.immoweb.be/fr/recherche/maison-et-appartement/a-louer/bruxelles/arrondissement?countries=BE&maxPrice=1250&maxConstructionYear=2025&minBedroomCount=1&propertySubtypes=PENTHOUSE,TRIPLEX,GROUND_FLOOR,TOWN_HOUSE,APARTMENT_BLOCK,COUNTRY_COTTAGE,CASTLE,CHALET,FARMHOUSE,EXCEPTIONAL_PROPERTY,MIXED_USE_BUILDING,MANSION,PAVILION,DUPLEX,LOFT,SERVICE_FLAT,MANOR_HOUSE,VILLA,OTHER_PROPERTY&page=1&orderBy=newest",
+    rent: "https://www.immoweb.be/fr/recherche/maison-et-appartement/a-louer?countries=BE&districts=CHARLEROI,BRUSSELS&maxPrice=1050&maxConstructionYear=2025&minBedroomCount=1&propertySubtypes=PENTHOUSE,TRIPLEX,GROUND_FLOOR,TOWN_HOUSE,APARTMENT_BLOCK,COUNTRY_COTTAGE,CASTLE,CHALET,FARMHOUSE,EXCEPTIONAL_PROPERTY,MIXED_USE_BUILDING,MANSION,PAVILION,DUPLEX,LOFT,SERVICE_FLAT,MANOR_HOUSE,VILLA,OTHER_PROPERTY&page=1&orderBy=newest",
     buy: "https://www.immoweb.be/fr/recherche/maison-et-appartement/a-vendre/bruxelles/arrondissement?countries=BE&maxPrice=350000&maxConstructionYear=2025&priceType=SALE_PRICE&page=1&orderBy=newest"
   };
 
